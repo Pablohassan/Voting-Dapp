@@ -1,7 +1,7 @@
 import { EthProvider } from "./contexts/EthContext";
 
 
-import Demo from "./components/Demo";
+import Voters from "./components/Voters";
 
 import "./App.css";
 
@@ -16,7 +16,7 @@ function App() {
          
         
        
-          <Demo />
+          <Voters />
    
          
         </div>

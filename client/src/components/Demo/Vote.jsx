@@ -171,8 +171,10 @@ function Vote() {
 
   // getters 
 
-
+  useEffect(() => {
   const getProposals = async () => {
+
+  
     const proposalsEvents = await contract.getPastEvents("ProposalRegistered", {
       fromBlock: 0,
       toBlock: "latest",
@@ -187,9 +189,9 @@ function Vote() {
     }
     setProposals(propsList);
   };
-useEffect(() => {
+
   getProposals();
-},[voteSteps]);
+},[contract, accounts]);
 
   const getWfStatus = async () => {
     try {
@@ -234,7 +236,7 @@ useEffect(() => {
       .addProposal(proposal)
       .send({ from: accounts[0] });
     setVoterProp(voterProp);
-    getProposals();
+    
     
   };
 
