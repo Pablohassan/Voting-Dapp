@@ -1,27 +1,30 @@
 import { useState, useEffect } from "react";
 import useEth from "../../contexts/EthContext/useEth";
-import {Grid,Card, Text, Input, Button,Row} from "@nextui-org/react";
+import { Grid, Card, Text, Input, Button, Row } from "@nextui-org/react";
+import Proposals from "./Proposals";
 
-function ContractBtns() {
-  const {state: { contract, accounts, web3 }} = useEth();
+function Vote() {
+  const {
+    state: { contract, accounts, web3 },
+  } = useEth();
   const [owner, setOwner] = useState(""); // ici on met l'owner
-  const [dropdownProp, setDropdownProp] = useState(""); // notre menu pour choisir la proposal 
-  const [inputAddress, writeInputAddress] = useState("");// l'adresse du voter 
-  const [currentWorkflow, setWfArr] = useState("");// l'état du wf actuel 
-  const [winningProposal, setWinningProposal]= useState("")
-  const [getProposal, setGetproposal] = useState([""]);
-  const [voterProp, setVoterProp] = useState([]); // la proposale du voter
-  const [proposalEvents, setProposalEvents]= useState([""])
-  const [oldProposalEvents, setOldProposalEvents] = useState([]); // les proposales déja 
-  const [proposalVoted, setProposalVoted] = useState([""]); // la proposale voté
- const [oldVotedEvents, setOldVotedEvents]= useState("")
- const [votedEvents, setVotedEvents]=useState([""])
+  const [dropdownProp, setDropdownProp] = useState(""); // notre menu pour choisir la proposal
+  const [inputAddress, writeInputAddress] = useState(""); // l'adresse du voter
+  const [currentWorkflow, setWfArr] = useState(""); // l'état du wf actuel
+  const [winningProposal, setWinningProposal] = useState("");
+  const [proposals, setProposals] = useState([""]); // les propositions des voteurs
+  const [voterProp, setVoterProp] = useState([]); // la proposition du voter
+  const [proposalEvents, setProposalEvents] = useState([""]); // event lié aux proposals
+  const [oldProposalEvents, setOldProposalEvents] = useState([]); // les proposales déja indéxés
+  const [proposalVoted, setProposalVoted] = useState(""); // la proposale voté
+  const [oldVotedEvents, setOldVotedEvents] = useState(""); // evenements liés aux adresses
+  const [votedEvents, setVotedEvents] = useState([""]);
   const [oldEventsAddr, setOldEvents] = useState([""]);
   const [eventAddr, setEventAddr] = useState("");
   const [workflow, setWfStatus] = useState("");
   const [eventWorkflow, setEventWorkflow] = useState("");
   const [oldWorkflowEvents, setOldWorkflowEvents] = useState([""]);
- 
+
   useEffect(() => {
     (async function () {
       if (contract) {
@@ -33,18 +36,15 @@ function ContractBtns() {
       }
     })();
   }, [contract, accounts]);
-  console.log(owner);
-console.log(winningProposal)
+
+  console.log(winningProposal);
 
   useEffect(() => {
     (async function () {
-      let oldVotedEvents = await contract.getPastEvents(
-        "Voted",
-        {
-          fromBlock: 0,
-          toBlock: "latest",
-        }
-      );
+      let oldVotedEvents = await contract.getPastEvents("Voted", {
+        fromBlock: 0,
+        toBlock: "latest",
+      });
       let oldVoted = [];
       oldVotedEvents.forEach((event) => {
         oldVoted.push(event.returnValues.voter.proposalId);
@@ -88,8 +88,6 @@ console.log(winningProposal)
     })();
   }, [contract, accounts]);
 
- 
-
   useEffect(() => {
     (async function () {
       let oldWorkflowEvents = await contract.getPastEvents(
@@ -115,7 +113,7 @@ console.log(winningProposal)
         .on("error", (err) => console.log(err))
         .on("connected", (str) => console.log(str));
     })();
-  }, [contract]);
+  }, [contract, accounts]);
 
   useEffect(() => {
     (async function () {
@@ -139,7 +137,59 @@ console.log(winningProposal)
         .on("error", (err) => console.log(err))
         .on("connected", (str) => console.log(str));
     })();
-  }, [contract]);
+  }, [contract, accounts]);
+
+  // selecteur de proposition de vote
+  const options = oldProposalEvents.map((proposal, index) => {
+    return (
+      <option key={index} value={proposal}>
+        {proposal}
+      </option>
+    );
+  });
+
+  const voteSteps = () => {
+    if (oldWorkflowEvents.length == 0) {
+      return "RegisteringVoters";
+    }
+    if (oldWorkflowEvents.length == 1) {
+      return "ProposalsRegistrationStarted";
+    } else if (oldWorkflowEvents.length == 2) {
+      return "ProposalsRegistrationEnded";
+    } else if (oldWorkflowEvents.length == 3) {
+      return "VotingSessionStarted";
+    } else if (oldWorkflowEvents.length == 4) {
+      return "VotingSessionEnded";
+    } else if (oldWorkflowEvents.length == 5) {
+      return "VotingSessionEnded";
+    }
+  };
+
+  const handleVoted = (event) => {
+    setDropdownProp(event.target.value);
+  };
+
+  // getters 
+
+
+  const getProposals = async () => {
+    const proposalsEvents = await contract.getPastEvents("ProposalRegistered", {
+      fromBlock: 0,
+      toBlock: "latest",
+    });
+    const propsLength = proposalsEvents.length;
+    const propsList = [];
+    for (let i = 1; i < propsLength + 1; i++) {
+      const proposalObj = await contract.methods
+        .getOneProposal(i)
+        .call({ from: accounts[0] });
+      propsList.push(proposalObj[0]);
+    }
+    setProposals(propsList);
+  };
+useEffect(() => {
+  getProposals();
+},[voteSteps]);
 
   const getWfStatus = async () => {
     try {
@@ -147,48 +197,25 @@ console.log(winningProposal)
         .call()
         .call();
       setWfArr(currentWorkflow);
-  
     } catch (err) {
       setWfArr("");
     }
   };
 
-  const voteSteps = () => {
- 
-    if (oldWorkflowEvents.length == 0) {
-      return "RegisteringVoters"
-    }
-      if (oldWorkflowEvents.length == 1) {
-      return "ProposalsRegistrationStarted"
-    }
-    else if (oldWorkflowEvents.length == 2){
-    return "ProposalsRegistrationEnded"
-    }
-    else if (oldWorkflowEvents.length == 3){
-      return "VotingSessionStarted"
-    }
-    else if (oldWorkflowEvents.length == 4) {
-      return "VotingSessionEnded"
-    }
-    else if (oldWorkflowEvents.length == 5){
-      return "VotingSessionEnded"
-    }
-    }
+  
 
   const getWiningProp = async () => {
-    try {
-      const winingProposal = await contract.winningProposalId.call(({from: accounts}))
-      await contract.winningProposalId.send({from: accounts})
-      setWinningProposal(winingProposal);
-    } catch (err) {
-      setWinningProposal("");
-    }
+    console.log("test0");
+
+    const winningProposal = await contract.methods
+      .winningProposalID()
+      .call({ from: accounts[0] });
+    console.log("test");
+    //  await contract.methods.winningProposalId.send({from: accounts[0]}).call()
+    setWinningProposal(`La proposition N°${winningProposal} a remporté le votewinningProposal`);
+    console.log("test2");
   };
-  console.log(winningProposal)
-
-
-console.log(voteSteps())
-
+  console.log(winningProposal);
   const address = inputAddress; // ajout d'un votant
   const addVoter = async () => {
     if (!web3.utils.isAddress(inputAddress)) {
@@ -207,51 +234,27 @@ console.log(voteSteps())
       .addProposal(proposal)
       .send({ from: accounts[0] });
     setVoterProp(voterProp);
-  };
-
-// const getOneProposal = async () => {
-
-//   try {
-//     getproposal
-
-
-//   }
-
-// }
-  
-  
-  
-  
-
-
-  const handlePropInput = (e) => {
-    e.preventDefault();
-    setVoterProp(e.target.value);
+    getProposals();
+    
   };
 
   const setVote = async () => {
-    const proposalVoted = await contract.methods
-      .setVote(dropdownProp)
-      .send({ from: accounts[0] });
+    await contract.methods.setVote(dropdownProp).send({ from: accounts[0] });
     setProposalVoted(proposalVoted);
   };
+  console.log(proposalVoted);
 
-  // const handleVotedProp = (e) => {
-  //   e.preventDefault();
-  //   setProposalVoted(e.target.value);
-  // };
-  // les diferentes phases du vote
   const startProposalsRegistering = async () => {
     await contract.methods
       .startProposalsRegistering()
       .send({ from: accounts[0] });
-      getWfStatus();
+    getWfStatus();
   };
   const endProposalsRegistering = async () => {
     await contract.methods
       .endProposalsRegistering()
       .send({ from: accounts[0] });
-      getWfStatus();
+    getWfStatus();
   };
   const startVotingSession = async () => {
     await contract.methods.startVotingSession().send({ from: accounts[0] });
@@ -263,19 +266,19 @@ console.log(voteSteps())
   };
   const tallyVotes = async () => {
     await contract.methods.tallyVotes().send({ from: accounts[0] });
-    getWfStatus()
-    ;
+    getWfStatus();
   };
 
   return contract && owner ? (
-   
-   <Grid.Container css={{ maxWidth: "800px" }} gap={2} justify="center">
+    <Grid.Container css={{ maxWidth: "800px" }} gap={2} justify="center">
       <Text css={{ margin: "5%" }} h1>
         Voting Dapp
-        </Text>
+      </Text>
 
       <Grid justify="center" xs={12}>
-        <Text aria-label="tonadresse" h2
+        <Text
+          aria-label="tonadresse"
+          h2
           css={{ margin: "10px", textAlign: "flexStart" }}
         >
           Connected Address
@@ -288,8 +291,8 @@ console.log(voteSteps())
         </Card>
       </Grid>
 
-      <Grid justify="center" xs={12}> 
-      <Text h2> Etape du vote: {voteSteps()}  </Text>
+      <Grid justify="center" xs={12}>
+        <Text h2> Etape du vote: {voteSteps()} </Text>
       </Grid>
 
       <Grid justify="center" md={6}>
@@ -323,93 +326,32 @@ console.log(voteSteps())
         </Card>
       </Grid>
 
-      <Grid justify="center" md={6}>
-        <Card css={{ width: "400px" }}>
-          <Card.Header>
-            <Text h2>Function Add Proposal</Text>
-          </Card.Header>
-          <Card.Divider />
-          <Card.Body css={{ py: "$10" }}>
-            <Text h3 css={{ marginBottom: "10px" }}>
-              Vous pouvez effectuer une propositon de vote
-            </Text>
-            <Card.Body css={{ py: "$10" }}>
-
-              <Input
-                justify="center"
-                css={{ maxWidth: "90%" }}
-                type="text"
-                placeholder="_add"
-                value={voterProp}
-                onChange={e => setVoterProp(e.target.value)}
-                aria-label="proposition de vote"
-              />
-            </Card.Body>
-          </Card.Body>
-          <Card.Divider />
-          <Card.Footer>
-            <Row justify="center">
-              <Row justify="center">
-                <Button onClick={addProposal} size="sm" color="secondary">
-                  Add Proposal
-                </Button>
-              </Row>
-            </Row>
-          </Card.Footer>
-        </Card>
-      </Grid>
-      <Grid justify="center" md={6}>
-        <Card css={{ width: "400px" }}>
-          <Card.Header>
-            <Text h2>Function Vote for proposal</Text>
-          </Card.Header>
-          <Card.Divider />
-          <Card.Body css={{ py: "$10" }}>
-            <Text h3 css={{ marginBottom: "10px" }}>
-              Vous pouvez voter pour une proposition
-            </Text>
-           <select 
-              value={dropdownProp}
-              onChange={(e) => setDropdownProp(e.target.value)}
-            >
-              {oldProposalEvents.map((opt, index) => (
-                <option key={index}>{opt}</option>
-              ))} {dropdownProp}
-         </select>
-     
-            <Card.Body css={{ py: "$10" }}>{proposalVoted}</Card.Body>
-          </Card.Body>
-          <Card.Divider />
-          <Card.Footer>
-            <Row justify="center">
-              <Row justify="center">
-                <Button onClick={() => setVote} size="sm" color="secondary">
-                  Vote
-                </Button>
-              </Row>
-            </Row>
-          </Card.Footer>
-        </Card>
-      </Grid>
       <Grid justify="center" xs={12}>
         {owner}
       </Grid>
-      <Grid justify="center" xs={12}>
-        <Button onClick={getWfStatus}>getWFstatus</Button>
-      </Grid>
+      <Grid justify="center" xs={12}></Grid>
       <Grid justify="center" xs={12}>
         <Button onClick={() => setVoterProp(voterProp)}>
           ajout au tableau des proposal{" "}
         </Button>
+        <Button onClick={getWiningProp} size="sm" color="secondary">
+          winning proposal
+        </Button>
       </Grid>
-      <Grid> <Text h2 css={{ marginBottom: "5px" }}> Derniere Adresse enregistrée : {eventAddr}</Text></Grid>
+      <Grid>
+        {" "}
+        <Text h2 css={{ marginBottom: "5px" }}>
+          {" "}
+          Derniere Adresse enregistrée : {eventAddr}
+        </Text>
+      </Grid>
 
       <Grid>
         {oldEventsAddr.map((element, index) => {
           return (
             <div key={index}>
               <Text h2 css={{ marginBottom: "5px" }}>
-                Le Votant n° {index+1} est enregistré
+                Le Votant n° {index + 1} est enregistré
               </Text>
               <h2>{element}</h2>
             </div>
@@ -418,9 +360,6 @@ console.log(voteSteps())
       </Grid>
       <Grid xs={12}></Grid>
       <Grid sx={12}>
-        <Button onClick={() => getWiningProp} size="sm" color="secondary">
-         winning proposal
-        </Button>
         <Button bordered onClick={startProposalsRegistering}>
           Start Proposal
         </Button>
@@ -439,129 +378,132 @@ console.log(voteSteps())
       </Grid>
     </Grid.Container>
   ) : (
-
-    <div> 
-      
-       <Grid.Container css={{ maxWidth: "800px" }} gap={2} justify="center">
-    <Text css={{ margin: "5%" }} h1>
-      Voting Dapp
+    <Grid.Container css={{ maxWidth: "800px" }} gap={2} justify="center">
+      <Text css={{ margin: "5%" }} h1>
+        Voting Dapp
       </Text>
 
-    <Grid justify="center" xs={12}>
-      <Text aria-label="tonadresse" h2
-        css={{ margin: "10px", textAlign: "flexStart" }}
-      >
-        Connected Address
-      </Text>
+      <Grid justify="center" xs={12}>
+        <Text
+          aria-label="tonadresse"
+          h2
+          css={{ margin: "10px", textAlign: "flexStart" }}
+        >
+          Connected Address
+        </Text>
 
-      <Card css={{ mw: "300px" }}>
-        <Card.Body>
-          <Text h3> Vottre adresse : {accounts[0]}</Text>
-        </Card.Body>
-      </Card>
-    </Grid>
-
-    <Grid justify="center" xs={12}> 
-    <Text h2> {voteSteps()}  </Text>
-    </Grid>
-
-    <Grid justify="center" md={6}>
-      <Card css={{ width: "400px" }}>
-        <Card.Header>
-          <Text h2>Function Add Proposal</Text>
-        </Card.Header>
-        <Card.Divider />
-        <Card.Body css={{ py: "$10" }}>
-          <Text h3 css={{ marginBottom: "10px" }}>
-            Vous pouvez effectuer une propositon de vote
-          </Text>
-          <Card.Body css={{ py: "$10" }}>
-            <Input
-              justify="center"
-              css={{ maxWidth: "90%" }}
-              type="text"
-              placeholder="_add"
-              value={voterProp}
-              onChange={e => setVoterProp(e.target.value)}
-              aria-label="proposition de vote"
-            />
+        <Card css={{ mw: "300px" }}>
+          <Card.Body>
+            <Text h3> Vottre adresse : {accounts[0]}</Text>
           </Card.Body>
-        </Card.Body>
-        <Card.Divider />
-        <Card.Footer>
-          <Row justify="center">
-            <Row justify="center">
-              <Button onClick={addProposal} size="sm" color="secondary">
-                Add Proposal
-              </Button>
-            </Row>
-          </Row>
-        </Card.Footer>
-      </Card>
-    </Grid>
+        </Card>
+      </Grid>
 
-    <Grid justify="center" md={6}>
-      <Card css={{ width: "400px" }}>
-        <Card.Header>
-          <Text h2>Function Vote for proposal</Text>
-        </Card.Header>
-        <Card.Divider />
-        <Card.Body css={{ py: "$10" }}>
-          <Text h3 css={{ marginBottom: "10px" }}>
-            Vous pouvez voter pour une proposition
-          </Text>
-         <select 
-            value={dropdownProp}
-            onChange={(e) => setDropdownProp(e.target.value)}
-          >
-            {oldProposalEvents.map((opt, index) => (
-              <option key={index}>{opt}</option>   
-            ))} {dropdownProp}
-       </select>
-   
-          <Card.Body css={{ py: "$10" }}>{proposalVoted}</Card.Body>
-        </Card.Body>
-        <Card.Divider />
-        <Card.Footer>
-          <Row justify="center">
-            <Row justify="center">
-              <Button onClick={setVote} size="sm" color="secondary">
-                Vote
-              </Button>
-            </Row>
-          </Row>
-        </Card.Footer>
-      </Card>
-    </Grid>
-    <Grid justify="center" xs={12}>
-      {owner}
-    </Grid>
-    <Grid justify="center" xs={12}>
-      <Button onClick={getWfStatus}>getWFstatus</Button>
-    </Grid>
-    <Grid justify="center" xs={12}>
-      <Button onClick={() => setVoterProp(voterProp)}>
-        ajout au tableau des proposal{" "}
-      </Button>
-    </Grid>
+      <Grid justify="center" xs={12}>
+        <Text h2> {voteSteps()} </Text>
+      </Grid>
 
-    <Grid>
-      {oldEventsAddr.map((element, index) => {
-        return (
-          <div key={index}>
-            <Text h2 css={{ marginBottom: "5px" }}>
-              Voter n {index} is Registered
+      <Grid justify="center" md={6}>
+        <Card css={{ width: "400px" }}>
+          <Card.Header>
+            <Text h2>Function Add Proposal</Text>
+          </Card.Header>
+          <Card.Divider />
+          <Card.Body css={{ py: "$10" }}>
+            <Text h3 css={{ marginBottom: "10px" }}>
+              Vous pouvez effectuer une propositon de vote
             </Text>
-            <h2>{element}</h2>
-          </div>
-        );
-      })}
-    </Grid>
-    <Grid xs={12}></Grid>
-   
-</Grid.Container>
-    </div>
+            <Card.Body css={{ py: "$10" }}>
+              <Input
+                justify="center"
+                css={{ maxWidth: "90%" }}
+                type="text"
+                placeholder="_add"
+                value={voterProp}
+                onChange={(e) => setVoterProp(e.target.value)}
+                aria-label="proposition de vote"
+              />
+            </Card.Body>
+          </Card.Body>
+          <Card.Divider />
+          <Card.Footer>
+            <Row justify="center">
+              <Row justify="center">
+                <Button onClick={addProposal} size="sm" color="secondary">
+                  Add Proposal
+                </Button>
+              </Row>
+            </Row>
+          </Card.Footer>
+        </Card>
+      </Grid>
+
+      <Grid justify="center" md={6}>
+        <Card css={{ width: "400px" }}>
+          <Card.Header>
+            <Text h2>Function Vote for proposal</Text>
+          </Card.Header>
+          <Card.Divider />
+          <Card.Body css={{ py: "$10" }}>
+            <Text h3 css={{ marginBottom: "10px" }}>
+              Vous pouvez voter pour une proposition
+            </Text>
+            <div>
+              <select value={dropdownProp} onChange={handleVoted}>
+                {options}
+              </select>
+              <h3>You choose {dropdownProp}</h3>
+            </div>
+            <Card.Body css={{ py: "$10" }}>{proposalVoted}</Card.Body>
+          </Card.Body>
+          <Card.Divider />
+          <Card.Footer>
+            <Row justify="center">
+              <Row justify="center">
+                <Button onClick={setVote} size="sm" color="secondary">
+                  Vote
+                </Button>
+              </Row>
+            </Row>
+          </Card.Footer>
+        </Card>
+      </Grid>
+
+      <Grid justify="center" xs={12}>
+        <Proposals />
+      </Grid>
+      <Grid justify="center" xs={12}>
+        <Button onClick={getWfStatus} size="sm" color="secondary">
+          getWFstatus
+        </Button>
+      </Grid>
+      <Grid justify="center" xs={12}></Grid>
+      <Button onClick={getWiningProp} size="sm" color="secondary">
+        winning proposal
+      </Button>
+      <Grid justify="center" xs={12}>
+        {" "}
+        <Text h2> 
+         
+          {winningProposal} 
+     
+        </Text>{" "}
+      </Grid>
+      <Grid>
+        {oldEventsAddr.map((element, index) => {
+          return (
+            <div key={index}>
+              <Text h2 css={{ marginBottom: "5px" }}>
+                Voter n {index} is Registered
+              </Text>
+              <h2>{element}</h2>
+            </div>
+          );
+        })}
+      </Grid>
+      <Grid xs={12}> </Grid>
+    </Grid.Container>
   );
 }
 
-export default ContractBtns;
+export default Vote;
