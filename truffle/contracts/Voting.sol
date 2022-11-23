@@ -79,7 +79,7 @@ contract Voting is Ownable {
  
 
     // ::::::::::::: PROPOSAL ::::::::::::: // 
-        ///@notice use _desc string to add one proposal
+        ///@notice use _desc string to add one proposal, limited to 1000 proposals
     function addProposal(string calldata _desc) external onlyVoters {
         require(proposalsArray.length < 1000,  "Maximum proposals") ;
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, 'Proposals are not allowed yet');
