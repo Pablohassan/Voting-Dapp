@@ -81,6 +81,7 @@ contract Voting is Ownable {
     // ::::::::::::: PROPOSAL ::::::::::::: // 
         ///@notice use _desc string to add one proposal
     function addProposal(string calldata _desc) external onlyVoters {
+        require(proposalsArray.length < 1000,  "Maximum proposals") ;
         require(workflowStatus == WorkflowStatus.ProposalsRegistrationStarted, 'Proposals are not allowed yet');
         require(keccak256(abi.encode(_desc)) != keccak256(abi.encode("")), 'Vous ne pouvez pas ne rien proposer'); // facultatif
         // voir que desc est different des autres
@@ -141,6 +142,7 @@ contract Voting is Ownable {
 ///@notice the owner tally Votes and the proposal with higer number of votes wins
 ///@dev the winning proposal is in winningProposalID 
    function tallyVotes() external onlyOwner { 
+    
        require(workflowStatus == WorkflowStatus.VotingSessionEnded, "Current status is not voting session ended");
        uint _winningProposalId;
       for (uint256 p = 0; p < proposalsArray.length; p++) {

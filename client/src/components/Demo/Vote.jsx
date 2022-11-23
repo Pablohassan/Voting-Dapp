@@ -333,9 +333,7 @@ function Vote() {
       </Grid>
       <Grid justify="center" xs={12}></Grid>
       <Grid justify="center" xs={12}>
-        <Button onClick={() => setVoterProp(voterProp)}>
-          ajout au tableau des proposal{" "}
-        </Button>
+       
         <Button onClick={getWiningProp} size="sm" color="secondary">
           winning proposal
         </Button>

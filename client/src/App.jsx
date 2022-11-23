@@ -1,24 +1,15 @@
 import { EthProvider } from "./contexts/EthContext";
 
-
-import Voters from "./components/Voters";
+import Demo from "./components/Demo";
 
 import "./App.css";
 
 function App() {
-
-  
   return (
     <EthProvider>
-      <div  >
+      <div>
         <div className="container">
-         
-         
-        
-       
-          <Voters />
-   
-         
+          <Demo />
         </div>
       </div>
     </EthProvider>
