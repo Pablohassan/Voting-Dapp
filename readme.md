@@ -2,7 +2,7 @@ Votting-Dapp
 
 Velcome to this voting Dapp
 
-this is basic app using truffle.js framework for voting constract with solidity contracts.
+this is basic app using truffle.js framework for voting with solidity contracts.
 
 Initialize the project Install the truffle framework npm install -g truffle Install the ganache gui or cli npm install -g ganache-cli git clone https://github.com/Pablohassan/Voting-Dapp && cd truffle && npm install then cd .. && cd client npm install In the background, simply run ganache-cli, the accounts/private keys will be generated and an in memory ETH blockchain will start.
 
